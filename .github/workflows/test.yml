@@ -1,16 +1,25 @@
 name: Test
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: 'uvu test file regex; empty runs the full suite'
+        required: false
+        default: ''
 permissions:
   contents: read
+env:
+  NODE_DISABLE_COLORS: 1
 jobs:
   full:
     name: Node.js Latest Full
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
+      - name: Configure npm time machine registry
+        run: |
+          npm config set registry https://time-machines-npm.sealsecurity.io/
+          npm config set //time-machines-npm.sealsecurity.io/:_authToken 2026-07-13T10:42:25.757000Z
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install Node.js & pnpm
@@ -21,9 +30,15 @@ jobs:
       - name: Install dependencies
         run: pnpm ci
       - name: Run tests
-        run: pnpm test
+        run: |
+          if [ -n "${{ inputs.test-filter }}" ]; then
+            pnpm exec uvu -r ts-node/register/transpile-only test "${{ inputs.test-filter }}"
+          else
+            pnpm test
+          fi
   short:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     strategy:
       matrix:
         node:
@@ -31,6 +46,10 @@ jobs:
           - 22
     name: Node.js ${{ matrix.node }} Quick
     steps:
+      - name: Configure npm time machine registry
+        run: |
+          npm config set registry https://time-machines-npm.sealsecurity.io/
+          npm config set //time-machines-npm.sealsecurity.io/:_authToken 2026-07-13T10:42:25.757000Z
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install Node.js & pnpm
@@ -43,9 +62,15 @@ jobs:
       - name: Install dependencies
         run: pnpm ci --ignore-scripts
       - name: Run unit tests
-        run: pnpm run unit
+        run: |
+          if [ -n "${{ inputs.test-filter }}" ]; then
+            pnpm exec uvu -r ts-node/register/transpile-only test "${{ inputs.test-filter }}"
+          else
+            pnpm run unit
+          fi
   old:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     strategy:
       matrix:
         node:
@@ -57,6 +82,10 @@ jobs:
           - 10
     name: Node.js ${{ matrix.node }} Quick
     steps:
+      - name: Configure npm time machine registry
+        run: |
+          npm config set registry https://time-machines-npm.sealsecurity.io/
+          npm config set //time-machines-npm.sealsecurity.io/:_authToken 2026-07-13T10:42:25.757000Z
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install pnpm
@@ -74,11 +103,21 @@ jobs:
       - name: Downgrade TypeScript
         run: pnpm install typescript@4 --ignore-scripts
       - name: Run unit tests
-        run: pnpm run old
+        run: |
+          if [ -n "${{ inputs.test-filter }}" ]; then
+            node --require ./test/old-node.js ./node_modules/uvu/bin.js -r module test "${{ inputs.test-filter }}"
+          else
+            pnpm run old
+          fi
   windows:
     runs-on: windows-latest
+    timeout-minutes: 40
     name: Windows Quick
     steps:
+      - name: Configure npm time machine registry
+        run: |
+          npm config set registry https://time-machines-npm.sealsecurity.io/
+          npm config set //time-machines-npm.sealsecurity.io/:_authToken 2026-07-13T10:42:25.757000Z
       - name: Checkout the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install pnpm
@@ -93,4 +132,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --ignore-scripts
       - name: Run unit tests
-        run: pnpm run unit
+        run: |
+          if ("${{ inputs.test-filter }}") {
+            pnpm exec uvu -r ts-node/register/transpile-only test "${{ inputs.test-filter }}"
+          } else {
+            pnpm run unit
+          }
